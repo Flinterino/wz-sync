@@ -1,6 +1,6 @@
 # L3 — UI design proposal
 
-**Owner approval pending.** This is an offline HTML prototype, not the WPF app or sync engine. The owner requested L3 before L2; no Core implementation is included in this PR.
+**Approved by the owner on 18 November 2026: English flow and dark / olive.** This is an offline HTML prototype, not the WPF app or sync engine. The owner requested L3 before L2; no Core implementation is included in this PR.
 
 ## Open and review
 
@@ -25,9 +25,9 @@ Additional edge states: [Up to date](previews/current.png), [Manual required](pr
 
 ## Visual direction
 
-Recommended: **light / olive** — a quiet Windows utility with pale surfaces, Segoe UI, restrained status colors and a muted olive action. Intended to make the change list readable and the approval action unambiguous.
+Alternative: **light / olive** — a quiet Windows utility with pale surfaces, Segoe UI, restrained status colors and a muted olive action. Intended to make the change list readable and the approval action unambiguous.
 
-Alternative: **dark / olive** — same layout/flow, closer to the pack's military visual identity. Compare [dark first run](previews/setup-dark.png) and [dark change list](previews/changes-dark.png), or use the review toolbar. The theme switch is a design-review control, not a commitment to ship a theme-settings feature.
+Approved default: **dark / olive** — same layout/flow, closer to the pack's military visual identity. Compare [dark first run](previews/setup-dark.png) and [dark change list](previews/changes-dark.png), or use the review toolbar. The theme switch is a design-review control, not a commitment to ship a theme-settings feature.
 
 UI copy is English, matching existing player-facing pack content. Icon paths and WZ lettering are original inline SVG/text; there are no borrowed screenshots, logos, external fonts or background images.
 
@@ -49,8 +49,8 @@ Everything is sample data. The profile label/path suffix is generic; no real dis
 
 Verified in an isolated local headless Edge profile: all displayed states render, screenshots were inspected, inline JavaScript parses as UTF-8, and a 16-check browser interaction smoke pass covers pack selection, exact seven-row list, complete per-file checksum toggle, approval/cancel navigation, ready handoff, complete restore preview, previous-version receipt, verification error detail, manual gating, up-to-date handoff and theme selection. No sync, browser download, game launch, file-picker/log action or restore was executed.
 
-Not verified: native WPF rendering, high-DPI/screen-reader behavior, real file/network safety, cancellation/recovery semantics, actual source metadata, game import/join or owner approval. Those belong to later implementation/review; L2 MUST security rules remain mandatory regardless of visual approval.
+Not verified: native WPF rendering, high-DPI/screen-reader behavior, real file/network safety, cancellation/recovery semantics, actual source metadata, game import/join. Those belong to later implementation/review; L2 MUST security rules remain mandatory regardless of visual approval.
 
-## Approval gate
+## Owner approval
 
-Owner reviews the complete flow, English copy and visual direction. Record approval/change requests before treating this as final UI. Next requested stage is L2 WzSync.Core in this public repository, in its own PR; L4 wiring stays separate. This PR does not change that gate or select a replacement for the plan's still-listed .NET 8 runtime.
+The owner approved the English flow and dark / olive direction on 18 November 2026. Dark is now the prototype default and the required-view screenshots use it. Light remains a review alternative. The owner also selected .NET 10 LTS for L2, superseding the earlier .NET 8 plan. Core remains a separate PR; L4 wiring is a later stage.

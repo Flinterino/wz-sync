@@ -2,7 +2,7 @@
 
 A planned, transparent Windows utility for keeping an existing CurseForge profile in sync with the Wars & Zombies pack.
 
-**Current stage: UI design review.** There is no downloadable launcher or sync engine yet. The files here are review-only mockups; they do not read or change a Minecraft profile.
+**Current stage: UI approved; Core implementation next.** There is no downloadable launcher or sync engine yet. The files here are review-only mockups; they do not read or change a Minecraft profile.
 
 - [L3 interactive mockup and review guide](design/l3/README.md)
 - [Six-screen overview](design/l3/previews/overview.png)

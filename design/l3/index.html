@@ -94,7 +94,7 @@ if(selected==='restored'){
  footer=note('Restore complete. Current files were backed up first.')+actions(button('Close',"fake('close the sync app')"),button('Check for updates',"go('changes')",true));
 }
 document.getElementById('screen').innerHTML=content;document.getElementById('footer').innerHTML=footer;document.title='WZ Sync · '+views.find(v=>v[0]===selected)[1];}
-const params=new URLSearchParams(location.search);if(params.has('capture'))document.body.classList.add('capture');setTheme(params.get('theme')==='dark'?'dark':'light');addEventListener('hashchange',render);render();
+const params=new URLSearchParams(location.search);if(params.has('capture'))document.body.classList.add('capture');setTheme(params.get('theme')==='light'?'light':'dark');addEventListener('hashchange',render);render();
 </script>
 </body>
 </html>
