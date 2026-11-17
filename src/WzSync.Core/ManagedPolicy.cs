@@ -24,9 +24,10 @@ public static class ManagedPolicy
         var value = directory && path.EndsWith('/') ? path[..^1] : path;
         foreach (var part in value.Split('/'))
         {
-            var stem = part.Split('.')[0];
+            var stem = part.Split('.')[0].TrimEnd(' ');
             if (part.Length == 0 || part is "." or ".." || part.EndsWith('.') || part.EndsWith(' ') || part.IndexOfAny(['<','>',':','"','|','?','*']) >= 0 ||
                 stem.Equals("CON", StringComparison.OrdinalIgnoreCase) || stem.Equals("PRN", StringComparison.OrdinalIgnoreCase) ||
+                stem.Equals("CONIN$", StringComparison.OrdinalIgnoreCase) || stem.Equals("CONOUT$", StringComparison.OrdinalIgnoreCase) ||
                 stem.Equals("AUX", StringComparison.OrdinalIgnoreCase) || stem.Equals("NUL", StringComparison.OrdinalIgnoreCase) ||
                 System.Text.RegularExpressions.Regex.IsMatch(stem, "^(COM|LPT)[1-9¹²³]$", System.Text.RegularExpressions.RegexOptions.IgnoreCase) ||
                 part.Equals(".wzsync", StringComparison.OrdinalIgnoreCase))
@@ -51,4 +52,3 @@ public static class ManagedPolicy
 
     internal static bool Includes(IEnumerable<string> rules, string path) => rules.Any(rule => rule == path || rule == "mods/" && path.StartsWith("mods/", StringComparison.Ordinal));
 }
-
