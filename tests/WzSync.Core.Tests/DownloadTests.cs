@@ -94,6 +94,18 @@ public sealed class DownloadTests : IDisposable
         using var handler=new Handler(_=>Redirect(location)); using var downloader=new VerifiedDownloader(handler);
         await Assert.ThrowsAsync<InvalidDataException>(()=>downloader.StageAsync(new ProfilePaths(root),Row(),"v1","tmp/a")); Assert.Single(handler.Requests);
     }
+    [Theory]
+    [InlineData(" \t/blob")]
+    [InlineData(" \r\n/blob")]
+    [InlineData("/bl\tob")]
+    [InlineData("/%09blob")]
+    [InlineData("/bl\\ob")]
+    public async Task Raw_redirect_controls_rejected_before_resolution(string location)
+    {
+        using var handler=new Handler(r=>r.RequestUri!.AbsolutePath=="/blob"?Body(Bytes):new HttpResponseMessage(HttpStatusCode.Found) { Headers={ Location=new Uri(location,UriKind.Relative) } });
+        using var downloader=new VerifiedDownloader(handler);
+        await Assert.ThrowsAsync<InvalidDataException>(()=>downloader.StageAsync(new ProfilePaths(root),Row(),"v1","tmp/a")); Assert.Single(handler.Requests);
+    }
     [Fact] public async Task Redirect_loop_bounded()
     {
         using var handler=new Handler(_=>Redirect("/loop")); using var downloader=new VerifiedDownloader(handler);
@@ -165,5 +177,3 @@ public sealed class DownloadTests : IDisposable
         } finally { Directory.Delete(Path.Combine(root,".wzsync/tmp")); }
     }
 }
-
-

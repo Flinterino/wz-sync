@@ -27,7 +27,10 @@ public sealed class VerifiedDownloader : IDisposable
                 using var response=await client.SendAsync(request,HttpCompletionOption.ResponseHeadersRead,cancellationToken).ConfigureAwait(false);
                 if(response.StatusCode is HttpStatusCode.MovedPermanently or HttpStatusCode.Found or HttpStatusCode.SeeOther or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect)
                 {
-                    if(redirects>=5 || response.Headers.Location==null || !Uri.TryCreate(uri,response.Headers.Location,out var next)) throw new InvalidDataException("Invalid download redirect.");
+                    var location=response.Headers.Location;
+                    if(redirects>=5 || location==null) throw new InvalidDataException("Invalid download redirect.");
+                    UrlPolicy.ValidateText(location.OriginalString);
+                    if(!Uri.TryCreate(uri,location,out var next)) throw new InvalidDataException("Invalid download redirect.");
                     UrlPolicy.ValidateHop(next); uri=next; continue;
                 }
                 if(response.StatusCode!=HttpStatusCode.OK) throw new InvalidDataException("Download returned an unavailable status.");
@@ -74,4 +77,3 @@ public sealed class VerifiedDownloader : IDisposable
         catch(OperationCanceledException) { throw new OperationCanceledException("Download canceled.",cancellationToken); }
     }
 }
-
