@@ -38,12 +38,27 @@ public static class SyncPlanner
 {
     public static SyncPlan Create(ProfilePaths profile,SyncManifest manifest)
     {
+        var desired=manifest.Files.ToDictionary(f=>f.Path,StringComparer.Ordinal);
+        var entries=new List<PlanEntry>();
+        foreach(var (path,current) in Inspect(profile,manifest.Managed,desired.Keys))
+        {
+            desired.TryGetValue(path,out var file);
+            if(current==null && file==null) continue;
+            var action=file==null ? PlanAction.Remove : current==null ? PlanAction.Add : current.Matches(file) ? PlanAction.Keep : PlanAction.Update;
+            entries.Add(new PlanEntry(path,action,current,file));
+        }
+        return new SyncPlan(profile,manifest,entries);
+    }
+
+    internal static IEnumerable<(string Path,FileSnapshot? Current)> Inspect(ProfilePaths profile,IEnumerable<string> scope,IEnumerable<string> desiredPaths)
+    {
         profile.CheckRoot();
         // Also refuse redirected internal state before offering an applicable plan.
         profile.ResolveState("tmp");
-        var paths=new HashSet<string>(manifest.Files.Select(f=>f.Path),StringComparer.Ordinal);
-        foreach(var rule in manifest.Managed)
+        var paths=new HashSet<string>(desiredPaths,StringComparer.Ordinal);
+        foreach(var rule in scope)
         {
+            ManagedPolicy.ValidateRule(rule);
             if(rule=="mods/")
             {
                 var directory=profile.ResolveManagedDirectory("mods");
@@ -64,18 +79,11 @@ public static class SyncPlanner
             }
             else paths.Add(rule);
         }
-        var desired=manifest.Files.ToDictionary(f=>f.Path,StringComparer.Ordinal);
-        var entries=new List<PlanEntry>();
         foreach(var path in paths.Order(StringComparer.Ordinal))
         {
             var full=profile.ResolveManaged(path);
             if(Directory.Exists(full)) throw new InvalidDataException("Managed file is a directory.");
-            var current=File.Exists(full) ? FileSnapshot.Capture(full) : null;
-            desired.TryGetValue(path,out var file);
-            if(current==null && file==null) continue;
-            var action=file==null ? PlanAction.Remove : current==null ? PlanAction.Add : current.Matches(file) ? PlanAction.Keep : PlanAction.Update;
-            entries.Add(new PlanEntry(path,action,current,file));
+            yield return (path,File.Exists(full) ? FileSnapshot.Capture(full) : null);
         }
-        return new SyncPlan(profile,manifest,entries);
     }
 }
