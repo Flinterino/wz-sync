@@ -1,21 +1,49 @@
+using System.Net;
+
 namespace WzSync.Core;
 internal static class UrlPolicy
 {
     internal static void ValidateHop(Uri uri,string source,Uri? initial=null)
     {
-        ValidateText(uri.OriginalString);
-        if(!uri.IsAbsoluteUri || uri.Scheme!="https" || uri.Port!=443 || uri.UserInfo.Length!=0 || uri.Fragment.Length!=0)
-            throw new InvalidDataException("Download URL is forbidden.");
+        ValidateHttps(uri);
         var allowed=source switch
         {
             "github" when uri.Host=="github.com" => initial==null || uri.AbsolutePath==initial.AbsolutePath,
-            "github" => initial!=null && uri.Host is "objects.githubusercontent.com" or "release-assets.githubusercontent.com",
+            "github" => initial!=null && IsGitHubAssetHost(uri.Host),
             "curseforge" => uri.Host is "edge.forgecdn.net" or "mediafilez.forgecdn.net",
             "modrinth" => uri.Host=="cdn.modrinth.com",
             _ => false
         };
         if(!allowed) throw new InvalidDataException("Download URL does not match the manifest source.");
     }
+    internal static HttpClientHandler CreateHandler() => new()
+    {
+        AllowAutoRedirect=false, UseCookies=false, AutomaticDecompression=DecompressionMethods.None,
+        UseDefaultCredentials=false, Credentials=null
+    };
+
+    internal static bool IsGitHubAssetHost(string host) =>
+        host is "objects.githubusercontent.com" or "release-assets.githubusercontent.com";
+
+    internal static bool IsRedirect(HttpStatusCode status) => status is
+        HttpStatusCode.MovedPermanently or HttpStatusCode.Found or HttpStatusCode.SeeOther or
+        HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect;
+
+    internal static Uri ResolveRedirect(Uri previous,Uri? location,int redirects)
+    {
+        if(redirects>=5 || location==null) throw new InvalidDataException("Invalid download redirect.");
+        ValidateText(location.OriginalString);
+        if(!Uri.TryCreate(previous,location,out var next)) throw new InvalidDataException("Invalid download redirect.");
+        return next;
+    }
+
+    internal static void ValidateHttps(Uri uri)
+    {
+        ValidateText(uri.OriginalString);
+        if(!uri.IsAbsoluteUri || uri.Scheme!="https" || uri.Port!=443 || uri.UserInfo.Length!=0 || uri.Fragment.Length!=0)
+            throw new InvalidDataException("Download URL is forbidden.");
+    }
+
     internal static void ValidateText(string raw)
     {
         if(raw.Any(char.IsControl) || raw.Contains('\\')) throw new InvalidDataException("Download URL contains forbidden characters.");

@@ -3,7 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    branches: [main]
+    branches: [main, codex/codex-home/core]
 permissions:
   contents: read
 jobs:
@@ -21,4 +21,6 @@ jobs:
       - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
           global-json-file: global.json
-      - run: dotnet test --configuration Release
+      - run: dotnet test tests/WzSync.Core.Tests --configuration Release
+      - if: runner.os == 'Windows'
+        run: dotnet test tests/WzSync.App.Tests --configuration Release

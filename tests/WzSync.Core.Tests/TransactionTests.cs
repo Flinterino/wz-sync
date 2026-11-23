@@ -57,6 +57,30 @@ public sealed class TransactionTests : IDisposable
         Assert.Null(Read("mods/a.jar")); Assert.Equal("old",Read("mods/b.jar")); Assert.Equal("removed",Read("mods/c.jar"));
         Assert.Equal("keep",Read("mods/k.jar")); Assert.Equal("options",Read("options.txt")); Assert.Equal("world",Read("saves/world/level.dat"));
     }
+    [Fact] public async Task Status_and_logs_do_not_create_state_and_progress_marks_mutation()
+    {
+        var engine=Engine();
+        Assert.False(engine.HasInterruptedOperation());
+        Assert.Null(paths.GetExistingLogDirectory());
+        Assert.False(Directory.Exists(Path.Combine(root,".wzsync")));
+        var phases=new List<SyncProgress>();
+        await engine.ApplyAsync(Fixture(),progress:new CaptureProgress(phases.Add));
+        Assert.Equal(2,phases.Count(p=>p.Phase==SyncPhase.Downloading));
+        var applied=phases.Where(p=>p.Phase==SyncPhase.Applying).ToArray();
+        Assert.Equal(0,applied[0].Completed);
+        Assert.Equal(3,applied[^1].Completed);
+        Assert.False(engine.HasInterruptedOperation());
+        var log=Directory.GetFiles(paths.GetExistingLogDirectory()!,"sync-*.log").Single();
+        using var reader=new StreamReader(paths.OpenSyncLog(Path.GetFileName(log)));
+        Assert.Contains("mods/b.jar",reader.ReadToEnd());
+        Assert.Throws<InvalidDataException>(()=>paths.OpenSyncLog("../sync-fixture.log"));
+    }
+
+    private sealed class CaptureProgress(Action<SyncProgress> report) : IProgress<SyncProgress>
+    {
+        public void Report(SyncProgress value) => report(value);
+    }
+
     [Fact] public async Task Restores_complete_inverse_and_preserves_both_backup_sets()
     {
         var engine=Engine(); await engine.ApplyAsync(Fixture());
@@ -85,8 +109,10 @@ public sealed class TransactionTests : IDisposable
         var engine=Engine((point,_)=>{if(point==phase) throw new TransactionInterruptedException();});
         await Assert.ThrowsAsync<TransactionInterruptedException>(()=>engine.ApplyAsync(Fixture()));
         var next=Engine();
+        Assert.True(next.HasInterruptedOperation());
         await Assert.ThrowsAsync<InvalidOperationException>(()=>next.ApplyAsync(Plan()));
         Assert.True(next.Recover()); Original(); Assert.False(next.Recover());
+        Assert.False(next.HasInterruptedOperation());
     }
     [Fact] public async Task Unknown_current_bytes_block_recovery_without_overwrite()
     {

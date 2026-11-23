@@ -5,7 +5,7 @@ namespace WzSync.Core;
 public sealed class VerifiedDownloader : IDisposable
 {
     private readonly HttpClient client;
-    public VerifiedDownloader() : this(new HttpClientHandler { AllowAutoRedirect=false,UseCookies=false,AutomaticDecompression=DecompressionMethods.None,UseDefaultCredentials=false,Credentials=null }) { }
+    public VerifiedDownloader() : this(UrlPolicy.CreateHandler()) { }
     internal VerifiedDownloader(HttpMessageHandler handler) => client=new HttpClient(handler,true);
     public void Dispose() => client.Dispose();
 
@@ -25,12 +25,9 @@ public sealed class VerifiedDownloader : IDisposable
             {
                 using var request=new HttpRequestMessage(HttpMethod.Get,uri);
                 using var response=await client.SendAsync(request,HttpCompletionOption.ResponseHeadersRead,cancellationToken).ConfigureAwait(false);
-                if(response.StatusCode is HttpStatusCode.MovedPermanently or HttpStatusCode.Found or HttpStatusCode.SeeOther or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect)
+                if(UrlPolicy.IsRedirect(response.StatusCode))
                 {
-                    var location=response.Headers.Location;
-                    if(redirects>=5 || location==null) throw new InvalidDataException("Invalid download redirect.");
-                    UrlPolicy.ValidateText(location.OriginalString);
-                    if(!Uri.TryCreate(uri,location,out var next)) throw new InvalidDataException("Invalid download redirect.");
+                    var next=UrlPolicy.ResolveRedirect(uri,response.Headers.Location,redirects);
                     UrlPolicy.ValidateHop(next,file.Source,initial); uri=next; continue;
                 }
                 if(response.StatusCode!=HttpStatusCode.OK) throw new InvalidDataException("Download returned an unavailable status.");

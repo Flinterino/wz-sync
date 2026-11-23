@@ -1,5 +1,9 @@
 namespace WzSync.Core;
 
+public enum SyncPhase { Downloading, Applying }
+
+public readonly record struct SyncProgress(SyncPhase Phase,string? Path,int Completed,int Total);
+
 public sealed class TransactionEngine
 {
     private readonly ProfilePaths paths;
@@ -14,7 +18,8 @@ public sealed class TransactionEngine
         store=new JournalStore(paths);
     }
 
-    public async Task ApplyAsync(SyncPlan plan,CancellationToken cancellationToken=default)
+    public async Task ApplyAsync(SyncPlan plan,CancellationToken cancellationToken=default,
+        IProgress<SyncProgress>? progress=null)
     {
         ArgumentNullException.ThrowIfNull(plan);
         RequireProfile(plan.ProfileRoot);
@@ -31,20 +36,23 @@ public sealed class TransactionEngine
         if(entries.All(e=>e.Action==PlanAction.Keep)) { CheckPlan(); return; }
         using var log=new LocalLog(paths,journal.Id);
         log.Write("apply");
+        var downloadCount=entries.Count(e=>e.Action is PlanAction.Add or PlanAction.Update);
+        var downloaded=0;
         for(var i=0;i<entries.Length;i++)
         {
             if(entries[i].Action is not (PlanAction.Add or PlanAction.Update)) continue;
+            progress?.Report(new(SyncPhase.Downloading,entries[i].Path,downloaded,downloadCount));
             log.Write("download",entries[i].Path);
             await downloader.StageAsync(paths,plan.Entries[i].Desired!,plan.Manifest.Version,Stage(journal,i),cancellationToken).ConfigureAwait(false);
             log.Write("staged",entries[i].Path);
+            downloaded++;
             checkpoint?.Invoke("staged",entries[i].Path);
         }
-        Commit(index,journal,log,CheckPlan,cancellationToken);
+        Commit(index,journal,log,CheckPlan,cancellationToken,progress);
     }
     public RestorePlan PrepareRestoreLast()
     {
-        if(!JournalStore.Exists(paths.ResolveState("lock"))) throw new InvalidOperationException("No restore point.");
-        using var lease=store.Lock(false);
+        using var lease=LockExistingState() ?? throw new InvalidOperationException("No restore point.");
         return Preview(Idle());
     }
     public Task RestoreAsync(RestorePlan plan,CancellationToken cancellationToken=default)
@@ -76,15 +84,24 @@ public sealed class TransactionEngine
         Commit(index,journal,log,CheckPlan,cancellationToken);
         return Task.CompletedTask;
     }
+    private FileStream? LockExistingState()
+    {
+        if(JournalStore.Exists(paths.ResolveState("lock"))) return store.Lock(false);
+        JournalStore.Require(!JournalStore.Exists(paths.ResolveState("state.json")),"Transaction lock is missing.");
+        store.Index();
+        return null;
+    }
+
+    public bool HasInterruptedOperation()
+    {
+        using var lease=LockExistingState();
+        return lease!=null && store.Index().Active!=null;
+    }
+
     public bool Recover()
     {
-        if(!JournalStore.Exists(paths.ResolveState("lock")))
-        {
-            JournalStore.Require(!JournalStore.Exists(paths.ResolveState("state.json")),"Transaction lock is missing.");
-            store.Index();
-            return false;
-        }
-        using var lease=store.Lock(false);
+        using var lease=LockExistingState();
+        if(lease==null) return false;
         var index=store.Index();
         if(index.Active==null) return false;
         var journal=store.Load(index.Active);
@@ -138,7 +155,8 @@ public sealed class TransactionEngine
                 Expect(paths.ResolveState(Backup(journal.Id,i)),row.Current);
         }
     }
-    private void Commit(StateIndex previous,OperationJournal journal,LocalLog log,Action checkPlan,CancellationToken token)
+    private void Commit(StateIndex previous,OperationJournal journal,LocalLog log,Action checkPlan,CancellationToken token,
+        IProgress<SyncProgress>? progress=null)
     {
         for(var i=0;i<journal.Entries.Length;i++)
         {
@@ -155,6 +173,9 @@ public sealed class TransactionEngine
         store.WriteIndex(active);
         try
         {
+            var changeCount=journal.Entries.Count(e=>e.Action!=PlanAction.Keep);
+            var applied=0;
+            progress?.Report(new(SyncPhase.Applying,null,0,changeCount));
             // Evacuate every original before installing the first replacement.
             for(var i=0;i<journal.Entries.Length;i++)
             {
@@ -167,6 +188,8 @@ public sealed class TransactionEngine
                 log.Write(row.Action==PlanAction.Remove ? "remove-to-backup" : "backup",row.Path);
                 checkpoint?.Invoke("backup",row.Path);
                 Expect(paths.ResolveState(backup),row.Current);
+                if(row.Action==PlanAction.Remove)
+                    progress?.Report(new(SyncPhase.Applying,row.Path,++applied,changeCount));
             }
             for(var i=0;i<journal.Entries.Length;i++)
             {
@@ -178,6 +201,7 @@ public sealed class TransactionEngine
                 File.Move(paths.ResolveState(Stage(journal,i)),paths.ResolveManaged(row.Path));
                 log.Write("install",row.Path);
                 checkpoint?.Invoke("install",row.Path);
+                progress?.Report(new(SyncPhase.Applying,row.Path,++applied,changeCount));
             }
             VerifyPoststate(journal);
             log.Write("verified");

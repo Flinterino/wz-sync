@@ -2,6 +2,10 @@
 
 Target: .NET 10. Namespace: `WzSync.Core`. This library implements file synchronization, not the WPF application or manifest publisher authentication.
 
+## Check the release
+
+`ReleaseManifestClient.FetchAsync(PackChoice.Full)` or `PackChoice.Lite` checks the manifest bytes against the matching sidecar for the same tag. The manifest version, pack choice and each downloadable row must meet the release and source policy before planning. The sidecar checks byte integrity. Publisher trust depends on the release source.
+
 ## Review before apply
 
 ```csharp
@@ -19,6 +23,8 @@ if (userApprovedDisplayedPlan && plan.CanApply)
 ```
 
 `SyncPlan`, manifest rows and entries are immutable; callers cannot construct arbitrary plans through the public API. A plan belongs to one selected profile. Apply rechecks the complete managed file set and snapshots, including KEEP/manual files, after staging. A changed plan must be displayed again; approval of an older plan is not approval of new changes.
+
+Call `HasInterruptedOperation()` to check recovery status without creating state. Call `ApplyAsync(plan, token, progress)` to observe per-file download and apply counts. The Applying phase starts at the journaled mutation boundary. User cancellation is honored before that boundary.
 
 The default downloader owns its HTTP handler with automatic redirects disabled. Each initial URL and every redirect hop passes the fixed source policy. `StageAsync` accepts only a new path under the selected profile's `.wzsync/tmp/`; it never applies a managed file. The engine independently rechecks staged size and hash before applying. Failed staging may leave an operation-owned partial file in internal state.
 

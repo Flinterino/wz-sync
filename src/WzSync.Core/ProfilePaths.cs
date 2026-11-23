@@ -18,6 +18,21 @@ public sealed class ProfilePaths
         ManagedPolicy.ValidateFile(relative);
         return Resolve(relative);
     }
+    public string? GetExistingLogDirectory()
+    {
+        var directory=Resolve(".wzsync");
+        return Directory.Exists(directory) ? directory : null;
+    }
+
+    public Stream OpenSyncLog(string fileName)
+    {
+        ManagedPolicy.ValidateRelative(fileName);
+        if(fileName.Contains('/') || !fileName.StartsWith("sync-",StringComparison.Ordinal) ||
+            !fileName.EndsWith(".log",StringComparison.Ordinal))
+            throw new InvalidDataException("Not a sync log name.");
+        return new FileStream(ResolveState(fileName),FileMode.Open,FileAccess.Read,FileShare.ReadWrite);
+    }
+
     internal string ResolveState(string relative)
     {
         ManagedPolicy.ValidateRelative(relative);
