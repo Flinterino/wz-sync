@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\WzSync.Core\WzSync.Core.csproj" />
+    <ProjectReference Include="../../tools/WzSync.Release/WzSync.Release.csproj" />
   </ItemGroup>
 
 </Project>

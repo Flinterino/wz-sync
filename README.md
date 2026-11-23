@@ -10,6 +10,23 @@ The app looks for CurseForge’s default Windows Instances folder. Use **Browse*
 
 The app reads the manifest and its checksum from the same tagged GitHub release. The manifest version matches the release tag. Checks display a missing-release error until both assets are available for the selected pack. [GitHub release asset links](https://docs.github.com/en/repositories/releasing-projects-on-github/linking-to-releases)
 
+## Download and verify
+
+Get `WzSync.App.exe` and `WzSync.App.exe.sha256` from the same official GitHub release. Download the Windows x64 executable once and run it as your usual Windows user. [Wars & Zombies Sync releases](https://github.com/Flinterino/wz-sync/releases)
+
+Before opening the executable, open PowerShell in the download folder and compare the checksum. Both lines should show the same 64 hexadecimal characters. If they differ, discard the download.
+
+```powershell
+(Get-FileHash -LiteralPath ./WzSync.App.exe -Algorithm SHA256).Hash.ToLowerInvariant()
+(Get-Content -LiteralPath ./WzSync.App.exe.sha256 -Raw).Trim().Split(' ')[0]
+```
+
+The executable is unsigned. Windows SmartScreen may warn that it does not recognize the app. A matching SHA-256 confirms the bytes against the checksum from the release. It does not prove the publisher’s identity. Use the official release as your source and leave Windows security protections enabled. [Microsoft SmartScreen guidance](https://learn.microsoft.com/windows/apps/package-and-deploy/smartscreen-reputation)
+
+The app includes its .NET runtime in the executable. On startup .NET may extract bundled native runtime files under `%TEMP%\.net`, or under a location configured through `DOTNET_BUNDLE_EXTRACT_BASE_DIR`. Sync data, backups and logs stay in the selected CurseForge profile. [How .NET single-file extraction works](https://learn.microsoft.com/en-us/dotnet/core/deploying/single-file/#native-libraries)
+
+The app needs no admin rights or installer. It runs no downloaded mods or other payloads and makes no registry or startup changes. It installs no services and has no telemetry or automatic launcher updates.
+
 ## Build and test
 
 Install the .NET 10 SDK specified in `global.json`. On Windows, run the WPF app or the full Release test suite.
@@ -21,11 +38,7 @@ dotnet test --configuration Release
 
 GitHub Actions runs Core tests on Linux and Windows and the WPF tests on Windows. On Linux, run `dotnet test tests/WzSync.Core.Tests --configuration Release`. The tests use temporary profiles and simulated release responses.
 
-For a local self-contained Windows x64 build:
-
-```sh
-dotnet publish src/WzSync.App --configuration Release --runtime win-x64 --self-contained true
-```
+The release workflow builds a self-contained Windows x64 executable and verifies that two fresh builds of the tagged commit match. [Release operator guide](docs/release.md)
 
 See the [Core caller contract](docs/core-api.md) for planning, explicit approval, restore and recovery. Verification evidence and platform limits are in the [L2 review report](docs/reviews/2026-11-18-core.md).
 

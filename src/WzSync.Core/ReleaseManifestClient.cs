@@ -9,6 +9,7 @@ public enum PackChoice { Full, Lite }
 
 public sealed class ReleaseManifestClient : IDisposable
 {
+    public const int MaximumChecksumBytes = 256;
     private const string ReleasePath = "/Flinterino/wz-sync/releases/";
     private const string Origin = "https://github.com";
     private static readonly UTF8Encoding StrictUtf8 = new(false, true);
@@ -21,25 +22,39 @@ public sealed class ReleaseManifestClient : IDisposable
 
     public async Task<SyncManifest> FetchAsync(PackChoice pack, CancellationToken cancellationToken = default)
     {
-        var packName = pack switch
-        {
-            PackChoice.Full => "full",
-            PackChoice.Lite => "lite",
-            _ => throw new ArgumentOutOfRangeException(nameof(pack))
-        };
-        var name = $"manifest-{packName}.json";
+        var name = ManifestName(pack);
         using var deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         deadline.CancelAfter(TimeSpan.FromSeconds(60));
         try
         {
             var (manifestBytes, tag) = await ReadAssetAsync(name, null, ManifestParser.MaximumBytes, deadline.Token).ConfigureAwait(false);
-            var (checksumBytes, _) = await ReadAssetAsync(name + ".sha256", tag, 256, deadline.Token).ConfigureAwait(false);
+            var (checksumBytes, _) = await ReadAssetAsync(name + ".sha256", tag, MaximumChecksumBytes, deadline.Token).ConfigureAwait(false);
+            return VerifyManifest(manifestBytes, checksumBytes, pack, tag);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            throw new IOException("The release request timed out.");
+        }
+        catch (HttpRequestException)
+        {
+            throw new IOException("Could not reach GitHub to check for updates.");
+        }
+    }
+
+    public static SyncManifest VerifyManifest(ReadOnlySpan<byte> manifestBytes, ReadOnlySpan<byte> checksumBytes,
+        PackChoice pack, string tag)
+    {
+        var name = ManifestName(pack);
+        if (!IsReleaseTag(tag) || manifestBytes.Length > ManifestParser.MaximumBytes || checksumBytes.Length > MaximumChecksumBytes)
+            throw new InvalidDataException("Invalid release tag or manifest file size.");
+        try
+        {
             var expected = Convert.ToHexStringLower(SHA256.HashData(manifestBytes)) + "  " + name;
             var checksum = StrictUtf8.GetString(checksumBytes);
             if (checksum != expected && checksum != expected + "\n" && checksum != expected + "\r\n")
                 throw new InvalidDataException("The manifest SHA-256 does not match its release checksum.");
             var manifest = ManifestParser.Parse(StrictUtf8.GetString(manifestBytes));
-            if (manifest.Pack != packName)
+            if (manifest.Pack != (pack == PackChoice.Full ? "full" : "lite"))
                 throw new InvalidDataException("The release manifest does not match the selected pack.");
             if (manifest.Version != tag)
                 throw new InvalidDataException("The manifest version does not match its release tag.");
@@ -51,15 +66,16 @@ public sealed class ReleaseManifestClient : IDisposable
         {
             throw new InvalidDataException("The release files are not valid UTF-8.");
         }
-        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-        {
-            throw new IOException("The release request timed out.");
-        }
-        catch (HttpRequestException)
-        {
-            throw new IOException("Could not reach GitHub to check for updates.");
-        }
     }
+
+    private static string ManifestName(PackChoice pack) => pack switch
+    {
+        PackChoice.Full => "manifest-full.json",
+        PackChoice.Lite => "manifest-lite.json",
+        _ => throw new ArgumentOutOfRangeException(nameof(pack))
+    };
+
+    private static bool IsReleaseTag(string tag) => TagName.IsMatch(tag) && !tag.EndsWith('.');
 
     private async Task<(byte[] Bytes, string Tag)> ReadAssetAsync(string name, string? tag, int maximumBytes,
         CancellationToken token)
@@ -110,8 +126,7 @@ public sealed class ReleaseManifestClient : IDisposable
             if (uri.AbsolutePath.StartsWith(prefix, StringComparison.Ordinal))
             {
                 var segments = uri.AbsolutePath[prefix.Length..].Split('/');
-                if (segments.Length == 2 && segments[1] == name && TagName.IsMatch(segments[0]) &&
-                    !segments[0].EndsWith('.') && (tag == null || tag == segments[0]))
+                if (segments.Length == 2 && segments[1] == name && IsReleaseTag(segments[0]) && (tag == null || tag == segments[0]))
                     return segments[0];
             }
         }

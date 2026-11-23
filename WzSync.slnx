@@ -7,4 +7,7 @@
     <Project Path="tests/WzSync.Core.Tests/WzSync.Core.Tests.csproj" />
     <Project Path="tests/WzSync.App.Tests/WzSync.App.Tests.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/WzSync.Release/WzSync.Release.csproj" />
+  </Folder>
 </Solution>
