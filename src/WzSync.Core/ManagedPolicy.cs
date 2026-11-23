@@ -12,7 +12,8 @@ public static class ManagedPolicy
         "config/livingwind-client.toml", "config/particlerain/config.json",
         "config/particlerain/particles.json", "config/pb_world_impact-client.toml",
         "config/sable_ragdoll_revival-client.toml", "config/seasonalfoliage-client.toml",
-        "config/sodium-options.json", "config/streamsreflowing-client.properties",
+        "config/sodium-options.json", "config/spice_of_life_berry/client.toml",
+        "config/streamsreflowing-client.properties",
         "config/subtle_effects/entities.toml", "config/subtle_effects/environment.toml",
         "config/subtle_effects/general.toml", "config/vista-client.toml", "mods/"
     });
