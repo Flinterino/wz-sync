@@ -59,5 +59,3 @@ public sealed class PlannerTests : IDisposable
         } finally { Directory.Delete(System.IO.Path.Combine(root,"mods")); }
     }
 }
-
-

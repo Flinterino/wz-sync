@@ -208,6 +208,38 @@ public sealed class TransactionTests : IDisposable
         await Assert.ThrowsAsync<InvalidOperationException>(()=>Engine().ApplyAsync(Plan()));
         File.WriteAllBytes(file,backup); Assert.True(Engine().Recover()); Original();
     }
+    [Theory] [InlineData(false)] [InlineData(true)]
+    public async Task Missing_index_with_backup_evidence_blocks_operations(bool removeLock)
+    {
+        var interrupted=Engine((phase,_)=>{if(phase=="backup") throw new TransactionInterruptedException();});
+        await Assert.ThrowsAsync<TransactionInterruptedException>(()=>interrupted.ApplyAsync(Fixture()));
+        var index=Path.Combine(root,".wzsync/state.json");
+        var indexBytes=File.ReadAllBytes(index);
+        File.Delete(index);
+        if(removeLock) File.Delete(Path.Combine(root,".wzsync/lock"));
+        var next=Engine();
+        Assert.Throws<InvalidDataException>(()=>next.Recover());
+        await Assert.ThrowsAsync<InvalidDataException>(()=>next.ApplyAsync(Plan()));
+        Assert.False(File.Exists(index));
+        var backup=Directory.GetFiles(Path.Combine(root,".wzsync/backup"),"*.original",SearchOption.AllDirectories).Single();
+        Assert.Equal("old",File.ReadAllText(backup));
+        Assert.Null(Read("mods/b.jar"));
+        File.WriteAllBytes(index,indexBytes);
+        Assert.True(next.Recover()); Original();
+    }
+    [Fact] public async Task Apply_rechecks_index_after_staging()
+    {
+        var engine=Engine(); await engine.ApplyAsync(Fixture());
+        var index=Path.Combine(root,".wzsync/state.json");
+        var savedIndex=File.ReadAllBytes(index);
+        var plan=Plan(Row("a.jar","next"),Row("b.jar","updated"),Row("k.jar","keep",true));
+        onDownload=()=>File.Delete(index);
+        await Assert.ThrowsAsync<InvalidDataException>(()=>engine.ApplyAsync(plan));
+        Assert.Equal("added",Read("mods/a.jar"));
+        Assert.False(File.Exists(index));
+        File.WriteAllBytes(index,savedIndex);
+        await engine.RestoreAsync(engine.PrepareRestoreLast()); Original();
+    }
     [Fact] public async Task Noop_apply_leaves_the_original_restore_point_available()
     {
         var engine=Engine(); await engine.ApplyAsync(Fixture()); var first=engine.PrepareRestoreLast();

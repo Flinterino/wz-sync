@@ -62,7 +62,11 @@ internal sealed class JournalStore(ProfilePaths paths)
 
     internal StateIndex Index()
     {
-        if(!Exists(paths.ResolveState("state.json"))) return new(null,null);
+        if(!Exists(paths.ResolveState("state.json")))
+        {
+            Require(!Exists(paths.ResolveState("backup"),allowDirectory:true),"Transaction index is missing while backups exist.");
+            return new(null,null);
+        }
         var index=Read<StateIndex>("state.json",512);
         Require((index.Active==null || IsId(index.Active)) && (index.Last==null || IsId(index.Last)) &&
             (index.Active==null || index.Active!=index.Last),"Invalid transaction index.");
@@ -104,11 +108,12 @@ internal sealed class JournalStore(ProfilePaths paths)
         }
     }
 
-    internal static bool Exists(string full)
+    internal static bool Exists(string full,bool allowDirectory=false)
     {
         try {
             var attributes=File.GetAttributes(full);
-            Require((attributes&(FileAttributes.Directory|FileAttributes.ReparsePoint))==0,"Expected a regular file.");
+            Require((attributes&FileAttributes.ReparsePoint)==0 &&
+                (allowDirectory || (attributes&FileAttributes.Directory)==0),"Unexpected transaction state entry.");
             return true;
         }
         catch(FileNotFoundException) { return false; }

@@ -95,6 +95,17 @@ public sealed class DownloadTests : IDisposable
         await Assert.ThrowsAsync<InvalidDataException>(()=>downloader.StageAsync(new ProfilePaths(root),Row(),"v1","tmp/a")); Assert.Single(handler.Requests);
     }
     [Theory]
+    [InlineData("curseforge","https://edge.forgecdn.net/asset","https://cdn.modrinth.com/blob")]
+    [InlineData("modrinth","https://cdn.modrinth.com/asset","https://mediafilez.forgecdn.net/blob")]
+    [InlineData("github",null,"https://github.com/other/repo/releases/download/v1/blob")]
+    public async Task Redirect_stays_within_approved_download_source(string source,string? initial,string location)
+    {
+        using var handler=new Handler(r=>r.RequestUri!.AbsoluteUri==location?Body(Bytes):Redirect(location));
+        using var downloader=new VerifiedDownloader(handler);
+        await Assert.ThrowsAsync<InvalidDataException>(()=>downloader.StageAsync(new ProfilePaths(root),Row(initial,source),"v1","tmp/a"));
+        Assert.Single(handler.Requests);
+    }
+    [Theory]
     [InlineData(" \t/blob")]
     [InlineData(" \r\n/blob")]
     [InlineData("/bl\tob")]
@@ -104,12 +115,12 @@ public sealed class DownloadTests : IDisposable
     {
         using var handler=new Handler(r=>r.RequestUri!.AbsolutePath=="/blob"?Body(Bytes):new HttpResponseMessage(HttpStatusCode.Found) { Headers={ Location=new Uri(location,UriKind.Relative) } });
         using var downloader=new VerifiedDownloader(handler);
-        await Assert.ThrowsAsync<InvalidDataException>(()=>downloader.StageAsync(new ProfilePaths(root),Row(),"v1","tmp/a")); Assert.Single(handler.Requests);
+        await Assert.ThrowsAsync<InvalidDataException>(()=>downloader.StageAsync(new ProfilePaths(root),Row("https://cdn.modrinth.com/asset","modrinth"),"v1","tmp/a")); Assert.Single(handler.Requests);
     }
     [Fact] public async Task Redirect_loop_bounded()
     {
         using var handler=new Handler(_=>Redirect("/loop")); using var downloader=new VerifiedDownloader(handler);
-        await Assert.ThrowsAsync<InvalidDataException>(()=>downloader.StageAsync(new ProfilePaths(root),Row(),"v1","tmp/a")); Assert.Equal(6,handler.Requests.Count);
+        await Assert.ThrowsAsync<InvalidDataException>(()=>downloader.StageAsync(new ProfilePaths(root),Row("https://cdn.modrinth.com/asset","modrinth"),"v1","tmp/a")); Assert.Equal(6,handler.Requests.Count);
     }
     [Theory] [InlineData(6)] [InlineData(8)] [InlineData(7)]
     public async Task Short_long_and_wrong_hash_rejected(int size)
@@ -138,7 +149,7 @@ public sealed class DownloadTests : IDisposable
     [Fact] public async Task Relative_redirect_is_resolved()
     {
         using var handler=new Handler(r=>r.RequestUri!.AbsolutePath=="/blob"?Body(Bytes):Redirect("/blob")); using var downloader=new VerifiedDownloader(handler);
-        await downloader.StageAsync(new ProfilePaths(root),Row(),"v1","tmp/a"); Assert.Equal("https://github.com/blob",handler.Requests[1].AbsoluteUri);
+        await downloader.StageAsync(new ProfilePaths(root),Row("https://cdn.modrinth.com/asset","modrinth"),"v1","tmp/a"); Assert.Equal("https://cdn.modrinth.com/blob",handler.Requests[1].AbsoluteUri);
     }
     [Fact] public async Task Exact_bytes_without_content_length_are_verified()
     {

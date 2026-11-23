@@ -14,7 +14,8 @@ public sealed class VerifiedDownloader : IDisposable
     public async Task<string> StageAsync(ProfilePaths paths,ManifestFile file,string expectedVersion,string stateRelativePath,CancellationToken cancellationToken=default)
     {
         ArgumentNullException.ThrowIfNull(paths); ArgumentNullException.ThrowIfNull(file);
-        var uri=UrlPolicy.ValidateInitial(file,expectedVersion);
+        var initial=UrlPolicy.ValidateInitial(file,expectedVersion);
+        var uri=initial;
         if(!stateRelativePath.StartsWith("tmp/",StringComparison.Ordinal)) throw new InvalidDataException("Staging must be below state tmp.");
         paths.ResolveState(stateRelativePath);
         cancellationToken.ThrowIfCancellationRequested();
@@ -22,7 +23,6 @@ public sealed class VerifiedDownloader : IDisposable
         {
             for(var redirects=0;;redirects++)
             {
-                UrlPolicy.ValidateHop(uri);
                 using var request=new HttpRequestMessage(HttpMethod.Get,uri);
                 using var response=await client.SendAsync(request,HttpCompletionOption.ResponseHeadersRead,cancellationToken).ConfigureAwait(false);
                 if(response.StatusCode is HttpStatusCode.MovedPermanently or HttpStatusCode.Found or HttpStatusCode.SeeOther or HttpStatusCode.TemporaryRedirect or HttpStatusCode.PermanentRedirect)
@@ -31,7 +31,7 @@ public sealed class VerifiedDownloader : IDisposable
                     if(redirects>=5 || location==null) throw new InvalidDataException("Invalid download redirect.");
                     UrlPolicy.ValidateText(location.OriginalString);
                     if(!Uri.TryCreate(uri,location,out var next)) throw new InvalidDataException("Invalid download redirect.");
-                    UrlPolicy.ValidateHop(next); uri=next; continue;
+                    UrlPolicy.ValidateHop(next,file.Source,initial); uri=next; continue;
                 }
                 if(response.StatusCode!=HttpStatusCode.OK) throw new InvalidDataException("Download returned an unavailable status.");
                 if(response.Content.Headers.ContentLength is long length && length!=file.Size) throw new InvalidDataException("Download size mismatch.");

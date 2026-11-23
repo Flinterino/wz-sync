@@ -35,13 +35,12 @@ public sealed class ProfilePaths
         foreach(var part in relative.Split('/'))
         {
             if(File.Exists(current)) throw new InvalidDataException("File used as path parent.");
-            if(Directory.Exists(current))
-            {
-                var matches=Directory.EnumerateFileSystemEntries(current).Select(Path.GetFileName).Where(n=>string.Equals(n,part,StringComparison.OrdinalIgnoreCase)).ToArray();
-                if(matches.Length>1 || matches.Length==1 && matches[0]!=part) throw new InvalidDataException("Ambiguous local path casing.");
-            }
+            var matches=Directory.Exists(current)
+                ? Directory.EnumerateFileSystemEntries(current).Select(Path.GetFileName).Where(n=>string.Equals(n,part,StringComparison.OrdinalIgnoreCase)).ToArray()
+                : [];
+            if(matches.Length>1 || matches.Length==1 && matches[0]!=part) throw new InvalidDataException("Ambiguous local path casing.");
             current=Path.Combine(current,part);
-            CheckEntry(current);
+            if(CheckEntry(current) && matches.Length==0) throw new InvalidDataException("Existing path does not use its directory entry name.");
         }
         return current;
     }
@@ -55,14 +54,14 @@ public sealed class ProfilePaths
             CheckEntry(current);
         }
     }
-    private static void CheckEntry(string path)
+    private static bool CheckEntry(string path)
     {
         try
         {
             if((File.GetAttributes(path)&FileAttributes.ReparsePoint)!=0) throw new InvalidDataException("Reparse points are forbidden.");
+            return true;
         }
-        catch(FileNotFoundException) { }
-        catch(DirectoryNotFoundException) { }
+        catch(FileNotFoundException) { return false; }
+        catch(DirectoryNotFoundException) { return false; }
     }
 }
-

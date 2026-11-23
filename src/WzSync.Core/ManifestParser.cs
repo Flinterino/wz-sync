@@ -84,5 +84,3 @@ public static class ManifestParser
         return uri;
     }
 }
-
-

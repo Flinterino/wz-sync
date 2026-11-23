@@ -12,13 +12,15 @@ dotnet test --configuration Release
 
 Production code uses the .NET base class library. Test dependencies are isolated to the test project. GitHub Actions runs the tests on Linux and Windows; no Minecraft installation, credentials or live server is required.
 
+See the [Core caller contract](docs/core-api.md) for planning, explicit approval, restore and recovery. Verification evidence and platform limits are in the [L2 review report](docs/reviews/2026-11-18-core.md).
+
 ## File and network policy
 
 The client contains a fixed allow-list of top-level mod files and individual pack configs. A downloaded manifest can only narrow it. Personal options, worlds, shaders, resource packs, maps and scripts are outside synchronization scope. The caller chooses the profile and explicitly approves a complete plan before applying it. Internal staging, journals, backups and local logs live in the selected profile's `.wzsync` directory.
 
 Paths are revalidated case-insensitively. Traversal, absolute paths, ambiguous Windows filenames, symlinks and junctions are refused, including in internal state paths. Run with the game closed. Do not change the profile while an operation is in progress. Path revalidation is defense against unsafe filesystem entries; it is not an operating-system sandbox against a hostile process racing filesystem changes under the same account.
 
-Downloads use HTTPS and exact host checks on every redirect hop. Only GitHub release assets, the approved CurseForge CDNs and Modrinth's CDN are allowed. Every file must match both its manifest byte size and SHA256. All new payloads are staged and verified before managed files change. Missing manual-download files block the entire apply; a mod-page link is not a download permission bypass.
+Downloads use HTTPS and each redirect hop must stay on an approved host for the declared provider. Only GitHub release assets, the approved CurseForge CDNs and Modrinth's CDN are allowed. Every file must match both its manifest byte size and SHA256. All new payloads are staged and verified before managed files change. Missing manual-download files block the entire apply; a mod-page link is not a download permission bypass.
 
 **A `.sha256` sidecar verifies integrity, not publisher identity.** A checksum fetched with an untrusted manifest does not authenticate that manifest or its publisher. This Core stage does not establish a signed release-trust policy. Do not treat arbitrary manifests as owner-approved simply because their hashes match.
 

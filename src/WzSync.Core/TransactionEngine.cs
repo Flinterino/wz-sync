@@ -81,6 +81,7 @@ public sealed class TransactionEngine
         if(!JournalStore.Exists(paths.ResolveState("lock")))
         {
             JournalStore.Require(!JournalStore.Exists(paths.ResolveState("state.json")),"Transaction lock is missing.");
+            store.Index();
             return false;
         }
         using var lease=store.Lock(false);
@@ -147,6 +148,8 @@ public sealed class TransactionEngine
         }
         checkPlan();
         token.ThrowIfCancellationRequested();
+        JournalStore.Require(store.Index()==previous,"Transaction index changed during staging.");
+        if(!JournalStore.Exists(paths.ResolveState("state.json"))) store.WriteIndex(previous);
         store.Save(journal);
         var active=previous with { Active=journal.Id };
         store.WriteIndex(active);
