@@ -58,6 +58,60 @@ public sealed class MainWindowTests
         finally { profile.Delete(true); }
     });
 
+    [Fact]
+    public Task Window_returns_to_setup_after_missing_release_and_can_check_again() => OnDispatcherAsync(async () =>
+    {
+        var profile = Directory.CreateTempSubdirectory("wz-sync-wpf-");
+        try
+        {
+            File.WriteAllText(Path.Combine(profile.FullName, "minecraftinstance.json"), "{}");
+            var mod = Path.Combine(profile.CreateSubdirectory("mods").FullName, "fixture.jar");
+            File.WriteAllText(mod, "original fixture bytes");
+            using var downloader = new VerifiedDownloader();
+            var checkedPacks = new List<PackChoice>();
+            const string missing = "The selected pack files are missing from the latest GitHub release.";
+            var session = new SyncSession((pack, _) =>
+            {
+                checkedPacks.Add(pack);
+                if (pack == PackChoice.Lite)
+                    return Task.FromException<SyncManifest>(new InvalidDataException(missing));
+
+                return Task.FromResult(ManifestParser.Parse("""
+                {"schema":1,"pack":"full","version":"test-v1","minecraft":"1.21.1","loader":"neoforge-21.1.265","managed":["mods/"],"files":[]}
+                """));
+            }, downloader);
+            var window = new MainWindow(session, [new("Temporary profile", profile.FullName)]);
+            try
+            {
+                var primary = Control<Button>(window, "PrimaryButton");
+                var secondary = Control<Button>(window, "SecondaryButton");
+                var setup = Control<ScrollViewer>(window, "SetupPane");
+                var profileList = Control<ListBox>(window, "ProfileList");
+
+                Click(primary);
+                await WaitUntilAsync(() => Control<TextBlock>(window, "StatusSubtitle").Text == missing);
+                Assert.Equal("Check for updates", primary.Content);
+                Click(primary);
+                await WaitUntilAsync(() => Control<Border>(window, "StatusPane").Visibility == Visibility.Visible);
+                Assert.Equal(new[] { PackChoice.Lite, PackChoice.Lite }, checkedPacks);
+                Assert.Equal("Back", secondary.Content);
+                Click(secondary);
+
+                Assert.Equal(Visibility.Visible, setup.Visibility);
+                Assert.Equal(0, profileList.SelectedIndex);
+                Assert.True(Control<RadioButton>(window, "LitePack").IsChecked == true);
+                Control<RadioButton>(window, "FullPack").IsChecked = true;
+                Click(primary);
+                await WaitUntilAsync(() => Equals(primary.Content, "Apply & Play"));
+                Assert.Equal(new[] { PackChoice.Lite, PackChoice.Lite, PackChoice.Full }, checkedPacks);
+                Assert.Equal("original fixture bytes", File.ReadAllText(mod));
+                Assert.False(Directory.Exists(Path.Combine(profile.FullName, ".wzsync")));
+            }
+            finally { window.Close(); }
+        }
+        finally { profile.Delete(true); }
+    });
+
     private static T Control<T>(Window window, string name) where T : class =>
         Assert.IsType<T>(window.FindName(name));
 

@@ -282,17 +282,12 @@ public partial class MainWindow : Window
             _ => "A file or network request could not be completed. Close Minecraft and check the local log."
         };
         var detail = activeFile == null ? null : $"File: {activeFile}";
-        ShowStatus(title, reason, detail, session.Profile != null ? "Check for updates" : "Back",
-            session.Profile != null ? CheckAsync : BackAsync, "Close", Close, isError: true);
+        var canRetry = session.Profile != null;
+        ShowStatus(title, reason, detail, canRetry ? "Check for updates" : null,
+            canRetry ? CheckAsync : null, "Back", ShowSetup, isError: true);
     }
 
-    private Task BackAsync()
-    {
-        ShowSetup();
-        return Task.CompletedTask;
-    }
-
-    private void ShowStatus(string heading, string subtitle, string? detail, string primary, Func<Task> action,
+    private void ShowStatus(string heading, string subtitle, string? detail, string? primary, Func<Task>? action,
         string secondary, Action back, bool isError = false)
     {
         SwitchPane(StatusPane);
