@@ -1,0 +1,333 @@
+<Window x:Class="WzSync.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Wars &amp; Zombies Sync" Width="1050" Height="720" MinWidth="790" MinHeight="560"
+        WindowStartupLocation="CenterScreen" Background="#202923" Foreground="#E9EDE5"
+        FontFamily="Segoe UI" FontSize="14" UseLayoutRounding="True">
+    <Window.Resources>
+        <SolidColorBrush x:Key="Paper" Color="#202923"/>
+        <SolidColorBrush x:Key="Surface" Color="#27312A"/>
+        <SolidColorBrush x:Key="Line" Color="#3D493E"/>
+        <SolidColorBrush x:Key="Soft" Color="#2D392C"/>
+        <SolidColorBrush x:Key="Ink" Color="#E9EDE5"/>
+        <SolidColorBrush x:Key="Muted" Color="#ADB9AA"/>
+        <SolidColorBrush x:Key="Accent" Color="#B3C99B"/>
+        <SolidColorBrush x:Key="Olive" Color="#ABC291"/>
+        <SolidColorBrush x:Key="Amber" Color="#E5C48A"/>
+        <SolidColorBrush x:Key="Red" Color="#F1B1A5"/>
+
+        <Style TargetType="Button">
+            <Setter Property="Background" Value="{StaticResource Surface}"/>
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Padding" Value="14,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="ButtonSurface" CornerRadius="5"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                Background="{TemplateBinding Background}" Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              RecognizesAccessKey="True"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="ButtonSurface" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="ButtonSurface" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                <Setter TargetName="ButtonSurface" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="ButtonSurface" Property="Opacity" Value=".40"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+            <Setter Property="Background" Value="{StaticResource Olive}"/>
+            <Setter Property="Foreground" Value="#1C2819"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Olive}"/>
+            <Setter Property="MinWidth" Value="130"/>
+        </Style>
+        <Style x:Key="PackCard" TargetType="RadioButton">
+            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+            <Setter Property="Background" Value="{StaticResource Surface}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Line}"/>
+            <Setter Property="Padding" Value="14"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="PackSurface" Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}" CornerRadius="6"
+                                BorderThickness="1" Padding="{TemplateBinding Padding}">
+                            <DockPanel>
+                                <Grid Width="16" Height="16" Margin="0,3,11,0" DockPanel.Dock="Left" VerticalAlignment="Top">
+                                    <Ellipse Stroke="{StaticResource Muted}"/>
+                                    <Ellipse x:Name="SelectedDot" Width="8" Height="8"
+                                             Fill="{StaticResource Accent}" Visibility="Collapsed"/>
+                                </Grid>
+                                <ContentPresenter/>
+                            </DockPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="PackSurface" Property="Background" Value="{StaticResource Soft}"/>
+                                <Setter TargetName="PackSurface" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                <Setter TargetName="SelectedDot" Property="Visibility" Value="Visible"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="PackSurface" Property="BorderBrush" Value="{StaticResource Accent}"/>
+                                <Setter TargetName="PackSurface" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style x:Key="Heading" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="29"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+        </Style>
+        <Style x:Key="Summary" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{StaticResource Muted}"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,6,0,18"/>
+        </Style>
+        <Style x:Key="GridText" TargetType="TextBlock">
+            <Setter Property="Margin" Value="8,5"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+            <Setter Property="TextTrimming" Value="CharacterEllipsis"/>
+            <Setter Property="ToolTip" Value="{Binding Text, RelativeSource={RelativeSource Self}}"/>
+        </Style>
+        <Style x:Key="HashText" TargetType="TextBlock" BasedOn="{StaticResource GridText}">
+            <Setter Property="FontFamily" Value="Consolas"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Border Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}" BorderThickness="0,0,0,1"
+                Padding="28,16">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="ViewLogButton" Content="View sync log" Click="ViewLog_Click" Margin="0,0,8,0"/>
+                    <Button x:Name="RestoreButton" Content="Restore backup" Click="PrepareRestore_Click"/>
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Border Background="{StaticResource Soft}" BorderBrush="{StaticResource Line}" BorderThickness="1"
+                            Padding="9,6" CornerRadius="5" Margin="0,0,12,0" VerticalAlignment="Center">
+                        <TextBlock Text="WZ" Foreground="{StaticResource Accent}" FontSize="17" FontWeight="Bold"/>
+                    </Border>
+                    <StackPanel>
+                        <TextBlock Text="Wars &amp; Zombies Sync" FontSize="17" FontWeight="SemiBold"/>
+                        <TextBlock Text="CurseForge profile sync" Foreground="{StaticResource Muted}" FontSize="12"/>
+                    </StackPanel>
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Margin="28,24,28,20">
+            <ScrollViewer x:Name="SetupPane" VerticalScrollBarVisibility="Auto" Focusable="False">
+                <StackPanel>
+                    <TextBlock Text="Get your pack ready" Style="{StaticResource Heading}"/>
+                    <TextBlock Text="Choose the CurseForge profile you already use. You’ll see every change before applying it."
+                               Style="{StaticResource Summary}"/>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="250"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Margin="0,0,24,0">
+                            <TextBlock Text="CurseForge profile" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <Border Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}"
+                                    BorderThickness="1" CornerRadius="6" Padding="12">
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="_Browse…" Click="Browse_Click"
+                                            VerticalAlignment="Top" Margin="10,0,0,0"/>
+                                    <StackPanel>
+                                        <ListBox x:Name="ProfileList" SelectionChanged="ProfileList_SelectionChanged"
+                                                 AutomationProperties.Name="CurseForge profile"
+                                                 MaxHeight="124" Background="{StaticResource Surface}" BorderThickness="0"
+                                                 Foreground="{StaticResource Ink}" DisplayMemberPath="Name"/>
+                                        <TextBlock x:Name="ProfileHint" Foreground="{StaticResource Muted}"
+                                                   TextWrapping="Wrap" Margin="2,5,0,0"/>
+                                    </StackPanel>
+                                </DockPanel>
+                            </Border>
+                            <TextBlock Text="Choose your pack" FontWeight="SemiBold" Margin="0,19,0,8"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <RadioButton x:Name="LitePack" GroupName="Pack" IsChecked="True"
+                                             Checked="Pack_Changed" Style="{StaticResource PackCard}"
+                                             AutomationProperties.Name="Lite pack" Margin="0,0,6,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Lite" FontWeight="SemiBold" FontSize="16"/>
+                                        <TextBlock Text="Core gameplay, fewer optional visuals." TextWrapping="Wrap"
+                                                   Margin="0,3,0,0" Foreground="{StaticResource Muted}"/>
+                                    </StackPanel>
+                                </RadioButton>
+                                <RadioButton x:Name="FullPack" GroupName="Pack" Grid.Column="1"
+                                             Checked="Pack_Changed" Style="{StaticResource PackCard}"
+                                             AutomationProperties.Name="Full pack" Margin="6,0,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="Full" FontWeight="SemiBold" FontSize="16"/>
+                                        <TextBlock Text="Core gameplay with more optional visuals." TextWrapping="Wrap"
+                                                   Margin="0,3,0,0" Foreground="{StaticResource Muted}"/>
+                                    </StackPanel>
+                                </RadioButton>
+                            </Grid>
+                            <TextBlock Text="Both packs join the same server. You can switch later."
+                                       Foreground="{StaticResource Muted}" Margin="0,8,0,0" TextWrapping="Wrap"/>
+                            <Button Content="View source on GitHub" Click="OpenSource_Click"
+                                    HorizontalAlignment="Left" Margin="0,16,0,0"/>
+                        </StackPanel>
+                        <Border Grid.Column="1" BorderBrush="{StaticResource Line}" BorderThickness="1,0,0,0"
+                                Padding="20,0,0,0">
+                            <StackPanel>
+                                <TextBlock Text="Review, approve, then play" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
+                                <TextBlock Text="Review files, sizes, sources, and checksums." Style="{StaticResource Summary}"/>
+                                <TextBlock Text="Approve the update when you’re ready. Keep Minecraft closed during the sync."
+                                           Style="{StaticResource Summary}"/>
+                                <TextBlock Text="Press Play in CurseForge when the update finishes." Style="{StaticResource Summary}"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </ScrollViewer>
+
+            <Grid x:Name="ReviewPane" Visibility="Collapsed">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <StackPanel>
+                    <TextBlock x:Name="ReviewHeading" Style="{StaticResource Heading}"/>
+                    <TextBlock x:Name="ReviewSubtitle" Style="{StaticResource Summary}"/>
+                    <Border Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}"
+                            BorderThickness="1" CornerRadius="5" Padding="12,9" Margin="0,0,0,12">
+                        <TextBlock x:Name="ReviewSummary" TextWrapping="Wrap"/>
+                    </Border>
+                    <TextBlock x:Name="ManualNotice" Foreground="{StaticResource Amber}" TextWrapping="Wrap"
+                               Margin="0,0,0,10" Visibility="Collapsed"/>
+                </StackPanel>
+                <DataGrid x:Name="ReviewGrid" Grid.Row="1" AutoGenerateColumns="False" IsReadOnly="True"
+                          CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
+                          CanUserReorderColumns="False" HeadersVisibility="Column" SelectionMode="Single"
+                          EnableRowVirtualization="True" Background="{StaticResource Surface}" Foreground="{StaticResource Ink}"
+                          RowBackground="{StaticResource Surface}" AlternatingRowBackground="{StaticResource Soft}"
+                          AlternationCount="2" BorderBrush="{StaticResource Line}" HorizontalGridLinesBrush="{StaticResource Line}"
+                          GridLinesVisibility="Horizontal" AutomationProperties.Name="Complete file change list">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="{StaticResource Soft}"/>
+                            <Setter Property="Foreground" Value="{StaticResource Ink}"/>
+                            <Setter Property="Padding" Value="8,7"/>
+                            <Setter Property="FontWeight" Value="SemiBold"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Action" Binding="{Binding Action}" Width="89" MinWidth="89">
+                            <DataGridTextColumn.ElementStyle>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource GridText}">
+                                    <Setter Property="FontWeight" Value="SemiBold"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Action}" Value="ADD">
+                                            <Setter Property="Foreground" Value="{StaticResource Accent}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Action}" Value="UPDATE">
+                                            <Setter Property="Foreground" Value="{StaticResource Amber}"/>
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding Action}" Value="REMOVE">
+                                            <Setter Property="Foreground" Value="{StaticResource Red}"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGridTextColumn.ElementStyle>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="File" Binding="{Binding Path}" Width="*" MinWidth="140"
+                                            ElementStyle="{StaticResource GridText}"/>
+                        <DataGridTextColumn Header="Current size" Binding="{Binding CurrentSize}" Width="95" MinWidth="95"
+                                            ElementStyle="{StaticResource GridText}"/>
+                        <DataGridTextColumn Header="Proposed size" Binding="{Binding DesiredSize}" Width="106" MinWidth="106"
+                                            ElementStyle="{StaticResource GridText}"/>
+                        <DataGridTextColumn Header="Source" Binding="{Binding Source}" Width="144" MinWidth="144"
+                                            ElementStyle="{StaticResource GridText}"/>
+                        <DataGridTemplateColumn Header="Mod page" Width="106" MinWidth="106">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <Button Content="Open page" Click="OpenModPage_Click" Margin="5,3" Padding="7,4"
+                                            IsEnabled="{Binding HasPage}" ToolTip="{Binding Notes}"
+                                            ToolTipService.ShowOnDisabled="True"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                        <DataGridTextColumn x:Name="OldHashColumn" Header="Current SHA-256" Binding="{Binding CurrentHash}"
+                                            Visibility="Collapsed" Width="470" MinWidth="470" ElementStyle="{StaticResource HashText}"/>
+                        <DataGridTextColumn x:Name="NewHashColumn" Header="Proposed SHA-256" Binding="{Binding DesiredHash}"
+                                            Visibility="Collapsed" Width="470" MinWidth="470" ElementStyle="{StaticResource HashText}"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <DockPanel Grid.Row="2" Margin="0,9,0,0">
+                    <CheckBox x:Name="ShowHashes" Content="Show SHA-256 details"
+                              Checked="HashVisibility_Changed" Unchecked="HashVisibility_Changed"
+                              Foreground="{StaticResource Ink}" VerticalAlignment="Center" Margin="0,0,14,0"/>
+                    <TextBlock Text="Checksums verify file integrity. Publisher trust depends on the release source."
+                               Foreground="{StaticResource Muted}" FontSize="12" TextWrapping="Wrap"/>
+                </DockPanel>
+            </Grid>
+
+            <Border x:Name="ProgressPane" Visibility="Collapsed" MaxWidth="720" Background="{StaticResource Surface}"
+                    BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="7" Padding="24"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock x:Name="ProgressHeading" Style="{StaticResource Heading}"/>
+                    <TextBlock x:Name="ProgressSubtitle" Style="{StaticResource Summary}"/>
+                    <ProgressBar x:Name="ProgressMeter" Height="9" Background="{StaticResource Line}"
+                                 Foreground="{StaticResource Olive}" AutomationProperties.Name="Operation progress"/>
+                    <TextBlock x:Name="ProgressFile" Margin="0,13,0,0" TextWrapping="Wrap"/>
+                </StackPanel>
+            </Border>
+
+            <Border x:Name="StatusPane" Visibility="Collapsed" MaxWidth="720" Background="{StaticResource Surface}"
+                    BorderBrush="{StaticResource Line}" BorderThickness="1" CornerRadius="7" Padding="24"
+                    VerticalAlignment="Center">
+                <StackPanel>
+                    <TextBlock x:Name="StatusHeading" Style="{StaticResource Heading}"/>
+                    <TextBlock x:Name="StatusSubtitle" TextWrapping="Wrap" Foreground="{StaticResource Muted}" Margin="0,8,0,0"/>
+                    <TextBlock x:Name="StatusDetails" TextWrapping="Wrap" Margin="0,14,0,0"/>
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="2" Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}"
+                BorderThickness="0,1,0,0" Padding="28,13">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="12,0,0,0">
+                    <Button x:Name="OpenLogFolderButton" Content="Open log folder" Click="OpenLogFolder_Click" Margin="0,0,8,0"/>
+                    <Button x:Name="SecondaryButton" Click="Secondary_Click" Margin="0,0,8,0"/>
+                    <Button x:Name="PrimaryButton" Click="Primary_Click" Style="{StaticResource PrimaryButton}"/>
+                </StackPanel>
+                <TextBlock x:Name="FooterNote" Foreground="{StaticResource Muted}" FontSize="12"
+                           TextWrapping="Wrap" VerticalAlignment="Center"/>
+            </DockPanel>
+        </Border>
+    </Grid>
+</Window>
