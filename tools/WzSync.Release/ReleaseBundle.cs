@@ -31,7 +31,7 @@ internal static class ReleaseBundle
             {
                 var extension = Path.GetExtension(row.Path);
                 var allowedExtension = row.Path.StartsWith("mods/", StringComparison.Ordinal)
-                    ? row.Path.StartsWith("mods/wz_", StringComparison.Ordinal) && extension == ".jar"
+                    ? extension == ".jar" && (row.Path.StartsWith("mods/wz_", StringComparison.Ordinal) || IsApprovedProjectJar(row.Path, row.Sha256))
                     : extension is ".json" or ".toml" or ".properties";
                 if (row.Availability != "download" || !allowedExtension)
                     throw new InvalidDataException("An owned asset has an unsupported managed path or availability.");
@@ -60,6 +60,14 @@ internal static class ReleaseBundle
         }
         return bundleCount;
     }
+
+    // The project owner approved these exact builds for the public pack feed.
+    internal static bool IsApprovedProjectJar(string path, string sha256) => (path, sha256) switch
+    {
+        ("mods/opacnationsandwarfare-0.2.5-test.jar", "30633a2b43e56037fceb5ed8ee787277177dd916d9544da69655c6182e7207a5") => true,
+        ("mods/seasonalfoliage-0.8.3.jar", "fd5d1f82b000959e4c1d641e17ad1eb566fb33b7c4c4f584b256bf7b6625a9dc") => true,
+        _ => false
+    };
 
     private static string Take(Dictionary<string, string> inventory, string name)
     {
