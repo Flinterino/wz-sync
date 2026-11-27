@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.RegularExpressions;
 using WzSync.Core;
 
 namespace WzStandalone;
@@ -10,7 +11,31 @@ public static class OfficialLauncherProfile
     public const string ProfileId = "wars-and-zombies-lite";
     public const string ProfileName = "Wars & Zombies Lite (WzSync)";
 
-    public static string? Register(string launcherRoot, string instanceRoot)
+    public const int MaximumHeapGiB = 10;
+    public static int RecommendedHeapGiB => RecommendHeap(GC.GetGCMemoryInfo().TotalAvailableMemoryBytes);
+
+    internal static int RecommendHeap(long bytes)
+    {
+        const long gib = 1024L * 1024 * 1024;
+        return bytes <= 0 ? 4 : (int)Math.Clamp(bytes / gib * 2 / 3, 2, MaximumHeapGiB);
+    }
+
+    internal static string WithHeapLimit(string? args, int gib)
+    {
+        if (gib is < 2 or > MaximumHeapGiB)
+            throw new ArgumentOutOfRangeException(nameof(gib));
+
+        // Remove top-level -Xmx tokens while preserving quoted Java argument values.
+        var original = args ?? "";
+        var flag = $"-Xmx{gib}G";
+        const string argument = """(?:[^\s"]|"[^"]*")+""";
+        var matches = Regex.Matches(original, argument);
+        var retained = matches.Cast<Match>().Select(match => match.Value)
+            .Where(value => !Regex.IsMatch(value.Trim('"'), @"^-Xmx\d+[kKmMgG]?$"));
+        return string.Join(" ", retained.Append(flag));
+    }
+
+    public static string? Register(string launcherRoot, string instanceRoot, int? heapGiB = null)
     {
         var launcher = new ProfilePaths(launcherRoot);
         var instance = new ProfilePaths(instanceRoot);
@@ -38,8 +63,6 @@ public static class OfficialLauncherProfile
             if (profile["name"]?.GetValue<string>() != ProfileName ||
                 profile["gameDir"]?.GetValue<string>() != instance.Root)
                 throw new InvalidDataException("The existing Lite profile points elsewhere. Rename or remove it in the official launcher first.");
-            if (profile["lastVersionId"]?.GetValue<string>() == LiteInstance.LoaderVersion)
-                return null;
         }
         else
         {
@@ -51,7 +74,12 @@ public static class OfficialLauncherProfile
             };
             profiles.Add(ProfileId, profile);
         }
+        var originalArgs = profile["javaArgs"]?.GetValue<string>();
+        var updatedArgs = WithHeapLimit(originalArgs, heapGiB ?? RecommendedHeapGiB);
+        if (profile["lastVersionId"]?.GetValue<string>() == LiteInstance.LoaderVersion && originalArgs == updatedArgs)
+            return null;
         profile["lastVersionId"] = LiteInstance.LoaderVersion;
+        profile["javaArgs"] = updatedArgs;
 
         var suffix = ".wzsync-" + Guid.NewGuid().ToString("N");
         var temporary = path + suffix + ".tmp";

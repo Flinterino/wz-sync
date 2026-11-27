@@ -16,7 +16,7 @@ When WzSync opens, it compares the selected profile with the latest published ma
 
 **Review pack default settings** offers the bundled mod configs plus first-run options and keybind presets used by Default Options. Existing personal options are preserved. Changed mod configs can be restored with **Restore backup**.
 
-**Set up Standalone Lite** creates an isolated profile from a matching local Lite installation. The official Minecraft Launcher handles sign-in and Play after NeoForge 21.1.265 has been installed. The preview requires a local Lite source for the initial import.
+**Set up Standalone Lite** creates an isolated profile from a matching local Lite installation. The official Minecraft Launcher handles sign-in and Play after NeoForge 21.1.265 has been installed. The preview requires a local Lite source for the initial import. Standalone Lite caps Minecraft's Java heap at 10 GB and chooses a lower limit on PCs with less RAM.
 
 ## Download and verify
 

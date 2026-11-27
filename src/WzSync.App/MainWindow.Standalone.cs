@@ -97,7 +97,8 @@ public partial class MainWindow
             OfficialLauncherProfile.Register(StandaloneSetup.OfficialRoot, StandaloneSetup.Instance);
             StandaloneSetup.OpenOfficialLauncher();
             ShowStatus("Minecraft Launcher opened.", $"Select {OfficialLauncherProfile.ProfileName} and press Play.",
-                null, null, null, "Back", ShowSetup);
+                $"Java memory limit: {OfficialLauncherProfile.RecommendedHeapGiB} GB on this PC.",
+                null, null, "Back", ShowSetup);
             return Task.CompletedTask;
         });
     }
