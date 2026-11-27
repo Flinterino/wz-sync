@@ -39,6 +39,7 @@ public sealed class ReleaseBundleTests : IDisposable
     [Theory]
     [InlineData("mods/opacnationsandwarfare-0.2.5-test.jar", "30633a2b43e56037fceb5ed8ee787277177dd916d9544da69655c6182e7207a5", true)]
     [InlineData("mods/seasonalfoliage-0.8.3.jar", "fd5d1f82b000959e4c1d641e17ad1eb566fb33b7c4c4f584b256bf7b6625a9dc", true)]
+    [InlineData("mods/seasonalfoliage-0.9.0.jar", "3f5bebbf650b81a12d6680b5b2f93c0a25af3bbb410ca4b6953e24832fc82f7b", true)]
     [InlineData("mods/opacnationsandwarfare-0.2.5-test.jar", "wrong-hash", false)]
     [InlineData("mods/opacnationsandwarfare-0.2.6-test.jar", "30633a2b43e56037fceb5ed8ee787277177dd916d9544da69655c6182e7207a5", false)]
     public void Non_Wz_project_jars_require_the_approved_path_and_hash(string path, string hash, bool allowed)

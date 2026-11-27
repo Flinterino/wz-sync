@@ -28,11 +28,13 @@ public partial class MainWindow : Window
     {
         session = fixtureSession ?? new SyncSession(releases.FetchAsync, downloader);
         profiles = new ObservableCollection<ProfileCandidate>(fixtureProfiles ?? DiscoverProfiles());
+        if (fixtureProfiles == null && StandaloneSetup.Profile is { } standalone) profiles.Add(standalone);
         InitializeComponent();
         ProfileList.ItemsSource = profiles;
         initialized = true;
         if (profiles.Count == 1) ProfileList.SelectedIndex = 0;
         else ShowSetup();
+        Loaded += (_, _) => StartAutomaticChecks(fixtureProfiles == null);
     }
 
     private static IReadOnlyList<ProfileCandidate> DiscoverProfiles()
@@ -51,11 +53,17 @@ public partial class MainWindow : Window
         var profile = ProfileList.SelectedItem as ProfileCandidate;
         try
         {
-            session.Select(profile?.Path, FullPack.IsChecked == true ? PackChoice.Full : PackChoice.Lite);
+            var standalone = profile?.IsStandalone == true;
+            FullPack.IsEnabled = !standalone;
+            if (standalone) LitePack.IsChecked = true;
+            session.Select(profile?.Path, FullPack.IsChecked == true ? PackChoice.Full : PackChoice.Lite, standalone);
             ShowSetup();
+            StartProfileCheck();
         }
         catch (Exception ex) when (IsExpected(ex))
         {
+            CancelProfileCheck();
+            UpdateNotice.Text = "Could not check the selected profile.";
             ShowError(ex, "Couldn’t select that profile.");
         }
     }
@@ -98,14 +106,26 @@ public partial class MainWindow : Window
         ProfileHint.Text = session.Profile?.Root ?? (profiles.Count == 0
             ? "No profile found in the default location. Browse to your existing profile."
             : "Select the profile you want to sync.");
+        var setupNeeded = IsStandalone && !StandaloneSetup.HasLoader;
         SetActions("Check for updates", session.Profile != null ? CheckAsync : null,
-            null, null, "Only managed files in the selected profile can change.");
+            setupNeeded ? "Install NeoForge" : null,
+            setupNeeded ? () => _ = InstallStandaloneLoaderAsync() : null,
+            setupNeeded ? "Standalone Lite is ready to sync. Install NeoForge before playing."
+                : "Only managed files in the selected profile can change.");
         UpdateAvailability();
     }
 
-    private Task CheckAsync() => RunOperationAsync("Checking for updates",
-        "Reading the latest release and checking the selected profile.", true,
-        async token => ShowSyncReview(await session.CheckAsync(token)));
+    private Task CheckAsync()
+    {
+        CancelProfileCheck();
+        return RunOperationAsync("Checking for updates",
+            "Reading the latest release and checking the selected profile.", true, async token =>
+            {
+                var plan = await session.CheckAsync(token);
+                ReportAvailability(plan);
+                ShowSyncReview(plan);
+            });
+    }
 
     private void ShowSyncReview(SyncPlan plan)
     {
@@ -127,8 +147,7 @@ public partial class MainWindow : Window
         if (manual > 0)
             SetActions("Check again", CheckAsync, "Cancel", ShowSetup, "Sync waits until all required files match.");
         else if (changed == 0)
-            SetActions("Play in CurseForge", () => VerifyAndPlayAsync(plan), "Back", ShowSetup,
-                "Game launch stays in CurseForge.");
+            SetActions(PlayLabel, () => VerifyAndPlayAsync(plan), "Back", ShowSetup, LaunchNote);
         else
             SetActions("Apply & Play", () => ApplyAsync(plan, changed), "Cancel", ShowSetup,
                 "Keep Minecraft closed while the update runs.");
@@ -142,9 +161,10 @@ public partial class MainWindow : Window
                 if (operation?.Token == token) ShowSyncProgress(report);
             });
             await session.ApplyAsync(plan, token, progress);
-            ShowStatus("Sync complete.", "Open CurseForge and press Play on the selected profile.",
+            UpdateNotice.Text = "Up to date. The reviewed update was applied.";
+            ShowStatus("Sync complete.", LaunchNote,
                 $"{ProfileName}  ·  {session.Pack}  ·  {plan.Manifest.Version}\n{ChangeCount(changed)} applied. A local backup is available.",
-                "Play in CurseForge", () => VerifyAndPlayAsync(plan), "Close", Close);
+                PlayLabel, () => VerifyAndPlayAsync(plan), "Back", ShowSetup);
         });
 
     private void ShowSyncProgress(SyncProgress report)
@@ -177,6 +197,7 @@ public partial class MainWindow : Window
 
     private Task PlayAsync()
     {
+        if (IsStandalone) return OpenStandaloneAsync();
         MessageBox.Show(this, $"Open CurseForge, choose “{ProfileName}” and press Play.", "Play in CurseForge",
             MessageBoxButton.OK, MessageBoxImage.Information);
         Close();
@@ -204,6 +225,7 @@ public partial class MainWindow : Window
         "Saving the current files and restoring the reviewed versions.", false, async _ =>
         {
             await session.RestoreAsync(plan);
+            UpdateNotice.Text = "Backup restored. Check for updates before playing.";
             ShowStatus("Backup restored.", "Check for updates before joining the server.",
                 "Current versions were saved to a local backup.", "Check for updates", CheckAsync, "Close", Close);
         });
@@ -296,7 +318,7 @@ public partial class MainWindow : Window
         StatusSubtitle.Text = subtitle;
         StatusDetails.Text = detail ?? "";
         StatusDetails.Visibility = detail == null ? Visibility.Collapsed : Visibility.Visible;
-        SetActions(primary, action, secondary, back, "Game launch stays in CurseForge.");
+        SetActions(primary, action, secondary, back, LaunchNote);
     }
 
     private void SwitchPane(UIElement shown)
@@ -323,6 +345,7 @@ public partial class MainWindow : Window
     private void UpdateAvailability()
     {
         var ready = operation == null && session.Profile != null;
+        PackDefaultsButton.IsEnabled = ready;
         RestoreButton.IsEnabled = ready;
         ViewLogButton.IsEnabled = ready;
         OpenLogFolderButton.IsEnabled = ready;
@@ -441,6 +464,7 @@ public partial class MainWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+        CancelProfileCheck();
         downloader.Dispose();
         releases.Dispose();
         base.OnClosed(e);

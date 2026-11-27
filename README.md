@@ -10,6 +10,14 @@ The app looks for CurseForge’s default Windows Instances folder. Use **Browse*
 
 The app reads the manifest and its checksum from the same tagged GitHub release. The manifest version matches the release tag. Checks display a missing-release error until both assets are available for the selected pack. [GitHub release asset links](https://docs.github.com/en/repositories/releasing-projects-on-github/linking-to-releases)
 
+## Startup checks and pack settings
+
+When WzSync opens, it compares the selected profile with the latest published manifest and reports whether an update is available. It remembers the last selection on this PC. Use **Check for updates** to review files and approve an update.
+
+**Review pack default settings** offers the bundled mod configs plus first-run options and keybind presets used by Default Options. Existing personal options are preserved. Changed mod configs can be restored with **Restore backup**.
+
+**Set up Standalone Lite** creates an isolated profile from a matching local Lite installation. The official Minecraft Launcher handles sign-in and Play after NeoForge 21.1.265 has been installed. The preview requires a local Lite source for the initial import.
+
 ## Download and verify
 
 Get `WzSync.App.exe` and `WzSync.App.exe.sha256` from the same official GitHub release. Download the Windows x64 executable once and run it as your usual Windows user. [Wars & Zombies Sync releases](https://github.com/Flinterino/wz-sync/releases)

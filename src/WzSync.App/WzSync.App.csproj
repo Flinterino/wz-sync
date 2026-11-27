@@ -7,6 +7,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
+    <EmbeddedResource Include="Standalone/lite-import.json" LogicalName="WzStandalone.lite-import.json" />
     <ProjectReference Include="../WzSync.Core/WzSync.Core.csproj" />
     <InternalsVisibleTo Include="WzSync.App.Tests" />
   </ItemGroup>

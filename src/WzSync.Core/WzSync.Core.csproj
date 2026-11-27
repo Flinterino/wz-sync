@@ -6,4 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="pack-defaults.zip" LogicalName="WzSync.Core.pack-defaults.zip" />
+  </ItemGroup>
 </Project>

@@ -134,7 +134,7 @@
                     </Border>
                     <StackPanel>
                         <TextBlock Text="Wars &amp; Zombies Sync" FontSize="17" FontWeight="SemiBold"/>
-                        <TextBlock Text="CurseForge profile sync" Foreground="{StaticResource Muted}" FontSize="12"/>
+                        <TextBlock Text="Install, sync, and play" Foreground="{StaticResource Muted}" FontSize="12"/>
                     </StackPanel>
                 </StackPanel>
             </DockPanel>
@@ -144,7 +144,7 @@
             <ScrollViewer x:Name="SetupPane" VerticalScrollBarVisibility="Auto" Focusable="False">
                 <StackPanel>
                     <TextBlock Text="Get your pack ready" Style="{StaticResource Heading}"/>
-                    <TextBlock Text="Choose the CurseForge profile you already use. You’ll see every change before applying it."
+                    <TextBlock Text="Sync an existing profile or set up a separate Lite installation. Review changes before applying them."
                                Style="{StaticResource Summary}"/>
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -152,15 +152,15 @@
                             <ColumnDefinition Width="250"/>
                         </Grid.ColumnDefinitions>
                         <StackPanel Margin="0,0,24,0">
-                            <TextBlock Text="CurseForge profile" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <TextBlock Text="Game profile" FontWeight="SemiBold" Margin="0,0,0,8"/>
                             <Border Background="{StaticResource Surface}" BorderBrush="{StaticResource Line}"
                                     BorderThickness="1" CornerRadius="6" Padding="12">
                                 <DockPanel>
-                                    <Button DockPanel.Dock="Right" Content="_Browse…" Click="Browse_Click"
+                                    <Button DockPanel.Dock="Right" Content="_Browseג€¦" Click="Browse_Click"
                                             VerticalAlignment="Top" Margin="10,0,0,0"/>
                                     <StackPanel>
                                         <ListBox x:Name="ProfileList" SelectionChanged="ProfileList_SelectionChanged"
-                                                 AutomationProperties.Name="CurseForge profile"
+                                                 AutomationProperties.Name="Game profile"
                                                  MaxHeight="124" Background="{StaticResource Surface}" BorderThickness="0"
                                                  Foreground="{StaticResource Ink}" DisplayMemberPath="Name"/>
                                         <TextBlock x:Name="ProfileHint" Foreground="{StaticResource Muted}"
@@ -168,6 +168,12 @@
                                     </StackPanel>
                                 </DockPanel>
                             </Border>
+                            <TextBlock x:Name="UpdateNotice" Foreground="{StaticResource Muted}"
+                                       AutomationProperties.LiveSetting="Polite" TextWrapping="Wrap" Margin="0,8,0,0"/>
+                            <Button Content="Set up Standalone Lite" Click="StandaloneSetup_Click"
+                                    HorizontalAlignment="Left" Margin="0,8,0,0"/>
+                            <Button x:Name="PackDefaultsButton" Content="Review pack default settings" Click="PackDefaults_Click"
+                                    HorizontalAlignment="Left" Margin="0,8,0,0"/>
                             <TextBlock Text="Choose your pack" FontWeight="SemiBold" Margin="0,19,0,8"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
@@ -203,9 +209,9 @@
                             <StackPanel>
                                 <TextBlock Text="Review, approve, then play" FontSize="17" FontWeight="SemiBold" TextWrapping="Wrap"/>
                                 <TextBlock Text="Review files, sizes, sources, and checksums." Style="{StaticResource Summary}"/>
-                                <TextBlock Text="Approve the update when you’re ready. Keep Minecraft closed during the sync."
+                                <TextBlock Text="Approve the update when youג€™re ready. Keep Minecraft closed during the sync."
                                            Style="{StaticResource Summary}"/>
-                                <TextBlock Text="Press Play in CurseForge when the update finishes." Style="{StaticResource Summary}"/>
+                                <TextBlock Text="Play through CurseForge or the official Minecraft Launcher, depending on the selected profile." Style="{StaticResource Summary}"/>
                             </StackPanel>
                         </Border>
                     </Grid>

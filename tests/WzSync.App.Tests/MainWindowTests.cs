@@ -112,6 +112,59 @@ public sealed class MainWindowTests
         finally { profile.Delete(true); }
     });
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public Task Launch_checks_selected_profile_without_changing_it(bool needsUpdate) => OnDispatcherAsync(async () =>
+    {
+        var profile = Directory.CreateTempSubdirectory("wz-sync-startup-");
+        try
+        {
+            File.WriteAllText(Path.Combine(profile.FullName, "minecraftinstance.json"), "{}");
+            var old = Path.Combine(profile.CreateSubdirectory("mods").FullName, "old.jar");
+            if (needsUpdate) File.WriteAllText(old, "original");
+            using var downloader = new VerifiedDownloader();
+            var session = new SyncSession((_, _) => Task.FromResult(ManifestParser.Parse("""
+                {"schema":1,"pack":"lite","version":"test-v1","minecraft":"1.21.1","loader":"neoforge-21.1.265","managed":["mods/"],"files":[]}
+                """)), downloader);
+            var window = new MainWindow(session, [new("Temporary profile", profile.FullName)]);
+            try
+            {
+                window.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+                var notice = Control<TextBlock>(window, "UpdateNotice");
+                await WaitUntilAsync(() => notice.Text.StartsWith(needsUpdate ? "Update available" : "Up to date"));
+                Assert.Equal(needsUpdate, File.Exists(old));
+                Assert.False(Directory.Exists(Path.Combine(profile.FullName, ".wzsync")));
+                Assert.Equal(Visibility.Visible, Control<ScrollViewer>(window, "SetupPane").Visibility);
+                Assert.Equal("Check for updates", Control<Button>(window, "PrimaryButton").Content);
+            }
+            finally { window.Close(); }
+        }
+        finally { profile.Delete(true); }
+    });
+
+    [Fact]
+    public Task Launch_displays_a_retryable_message_when_the_feed_is_unreachable() => OnDispatcherAsync(async () =>
+    {
+        var profile = Directory.CreateTempSubdirectory("wz-sync-startup-offline-");
+        try
+        {
+            File.WriteAllText(Path.Combine(profile.FullName, "minecraftinstance.json"), "{}");
+            using var downloader = new VerifiedDownloader();
+            var session = new SyncSession((_, _) => Task.FromException<SyncManifest>(new IOException("Offline")), downloader);
+            var window = new MainWindow(session, [new("Temporary profile", profile.FullName)]);
+            try
+            {
+                window.RaiseEvent(new RoutedEventArgs(FrameworkElement.LoadedEvent));
+                await WaitUntilAsync(() => Control<TextBlock>(window, "UpdateNotice").Text.StartsWith("Could not check"));
+                Assert.True(Control<Button>(window, "PrimaryButton").IsEnabled);
+                Assert.False(Directory.Exists(Path.Combine(profile.FullName, ".wzsync")));
+            }
+            finally { window.Close(); }
+        }
+        finally { profile.Delete(true); }
+    });
+
     private static T Control<T>(Window window, string name) where T : class =>
         Assert.IsType<T>(window.FindName(name));
 
