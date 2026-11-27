@@ -3,7 +3,7 @@ using WzSync.Core;
 
 namespace WzSync.App;
 
-internal sealed record ProfileCandidate(string Name, string Path);
+internal sealed record ProfileCandidate(string Name, string Path, bool IsStandalone = false);
 
 internal static class ProfileSelection
 {

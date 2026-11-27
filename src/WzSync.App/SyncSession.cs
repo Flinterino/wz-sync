@@ -15,12 +15,12 @@ internal sealed class SyncSession(Func<PackChoice, CancellationToken, Task<SyncM
     internal bool IsBusy { get; private set; }
     private SyncPlan? appliedReview;
 
-    internal void Select(string? directory, PackChoice pack)
+    internal void Select(string? directory, PackChoice pack, bool standalone = false)
     {
         DiscardReview();
         Profile = null;
         Pack = pack;
-        if (directory != null) Profile = ProfileSelection.Open(directory);
+        if (directory != null) Profile = standalone ? StandaloneSetup.Open(directory) : ProfileSelection.Open(directory);
     }
 
     internal void DiscardReview()
@@ -29,6 +29,17 @@ internal sealed class SyncSession(Func<PackChoice, CancellationToken, Task<SyncM
         SyncReview = null;
         RestoreReview = null;
         appliedReview = null;
+    }
+
+    internal async Task<SyncPlan> CheckAvailabilityAsync(ProfilePaths profile, PackChoice pack, CancellationToken token)
+    {
+        return await Task.Run(async () =>
+        {
+            RequireNoRecovery(new TransactionEngine(profile, downloader));
+            var manifest = await fetch(pack, token).ConfigureAwait(false);
+            token.ThrowIfCancellationRequested();
+            return SyncPlanner.Create(profile, manifest);
+        }, token).ConfigureAwait(false);
     }
 
     internal Task<SyncPlan> CheckAsync(CancellationToken token)

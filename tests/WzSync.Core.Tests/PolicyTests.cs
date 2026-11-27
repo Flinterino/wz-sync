@@ -13,6 +13,8 @@ public sealed class PolicyTests
     [InlineData("mods/a. ")]
     [InlineData("mods/sub/a.jar")]
     [InlineData("config/options.txt")]
+    [InlineData("options.txt")]
+    [InlineData("config/defaultoptions/servers.dat")]
     [InlineData(".wzsync/a")]
     [InlineData("mods\\a.jar")]
     [InlineData("Mods/a.jar")]
@@ -21,6 +23,8 @@ public sealed class PolicyTests
     [Theory]
     [InlineData("mods/a.jar")]
     [InlineData("config/DistantHorizons.toml")]
+    [InlineData("config/defaultoptions/options.txt")]
+    [InlineData("config/defaultoptions/keybindings.txt")]
     public void Approved_files_are_accepted(string path) => ManagedPolicy.ValidateFile(path);
 
     [Theory]
@@ -47,5 +51,5 @@ public sealed class PolicyTests
     }
 
     [Fact]
-    public void Exact_policy_has_twenty_rules() => Assert.Equal(20, ManagedPolicy.Rules.Count);
+    public void Exact_policy_has_twenty_two_rules() => Assert.Equal(22, ManagedPolicy.Rules.Count);
 }

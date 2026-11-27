@@ -6,7 +6,7 @@ public static class ManagedPolicy
 {
     public static IReadOnlyList<string> Rules { get; } = Array.AsReadOnly(new[]
     {
-        "config/DistantHorizons.toml", "config/analoglib/analoglib.client.toml",
+        "config/DistantHorizons.toml", "config/defaultoptions/options.txt", "config/defaultoptions/keybindings.txt", "config/analoglib/analoglib.client.toml",
         "config/better_cloud_shadows.json", "config/cirrus-client.json",
         "config/eclipticseasons-client.toml", "config/entity_texture_features.json",
         "config/livingwind-client.toml", "config/particlerain/config.json",
